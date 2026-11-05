@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#FFE4EA"><link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes"><title>Caderno de Receitas</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#FFF0F3;--p:#FF758F;--card:#FFE9EE;--blue:#4DA6DE;--ink:#2B2024;--mut:#7a6a70}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Fredoka,system-ui,sans-serif;padding-bottom:90px}
+header{position:sticky;top:0;background:#FFE4EA;padding:calc(14px + env(safe-area-inset-top)) 16px 12px;z-index:5}
+h1{margin:0;font-size:22px;color:var(--p)}
+.wrap{padding:12px 16px;max-width:560px;margin:auto}
+.search{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid var(--ink);border-radius:24px;padding:12px 16px;margin-bottom:12px}
+.search input{border:0;outline:0;flex:1;font:inherit;font-size:16px;background:none}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
+.chip{white-space:nowrap;border:1.5px solid var(--ink);background:#fff;border-radius:20px;padding:7px 14px;font:inherit;font-size:14px;font-weight:500;cursor:pointer}
+.chip.on{background:var(--p);border-color:var(--p);color:#fff}
+.card{background:#fff;border-radius:24px;box-shadow:0 4px 14px #ff758f33;margin:14px 0;overflow:hidden;position:relative;cursor:pointer}
+.card img{width:100%;height:190px;object-fit:cover;display:block}
+.card .b{padding:16px 20px}.card h3{margin:0 0 12px;font-size:18px}
+.badge{position:absolute;top:12px;left:12px;background:#FFA62B;color:#fff;border-radius:14px;padding:5px 12px;font-size:13px;font-weight:500}
+.tag{display:inline-block;background:#d9f4f1;color:#1f9d92;border-radius:14px;padding:5px 12px;font-size:13px;font-weight:500}
+.row{display:flex;justify-content:space-between;align-items:center}
+.ib{background:none;border:0;font-size:20px;cursor:pointer;color:var(--p)}
+.fab{position:fixed;right:16px;bottom:100px;background:var(--p);color:#fff;border:0;border-radius:28px;padding:16px 24px;font:inherit;font-weight:600;font-size:15px;box-shadow:0 6px 16px #ff758f66;z-index:6}
+nav{position:fixed;bottom:0;left:0;right:0;background:#FFE4EA;display:flex;justify-content:space-around;padding:8px 8px calc(8px + env(safe-area-inset-bottom));z-index:7}
+nav button{border:0;background:none;font:inherit;font-size:12px;font-weight:500;padding:8px 22px;border-radius:20px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;color:var(--ink)}
+nav button span{font-size:22px}nav button.on{background:#ffc9d4}
+.panel{background:var(--card);border-radius:28px;padding:20px;margin:16px 0;box-shadow:0 4px 14px #ff758f22}
+.panel h2{margin:0 0 6px;font-size:19px;color:var(--p)}.panel p{margin:0 0 14px;color:var(--mut);font-size:14px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+.stat{border-radius:18px;padding:14px;font-size:14px}.stat b{display:block;font-size:24px}
+.btn{width:100%;border:0;border-radius:22px;padding:14px;font:inherit;font-weight:600;font-size:15px;cursor:pointer;margin:5px 0;background:var(--p);color:#fff}
+.btn.o{background:none;border:1.5px solid var(--ink);color:var(--p)}.btn.b{background:var(--blue)}
+.ov{position:fixed;inset:0;background:#0006;z-index:20;display:flex;align-items:flex-end}
+.sheet{background:var(--bg);width:100%;max-height:92vh;overflow:auto;border-radius:28px 28px 0 0;padding:20px 18px calc(24px + env(safe-area-inset-bottom));max-width:560px;margin:auto}
+.sheet h2{margin:0 0 12px;color:var(--p)}
+input,select,textarea{width:100%;font:inherit;font-size:15px;border:1.5px solid #f3b6c3;border-radius:16px;padding:11px 14px;margin:5px 0 8px;background:#fff;outline:0}
+label{font-size:13px;font-weight:500;color:var(--mut)}
+.det img{width:100%;border-radius:20px;max-height:220px;object-fit:cover}
+.det li{margin:6px 0;line-height:1.4}.det ol li{margin-bottom:10px}
+.lst label{display:flex;gap:12px;align-items:center;background:#fff;border-radius:16px;padding:12px 14px;margin:8px 0;font-size:15px;color:var(--ink)}
+.lst input{width:20px;height:20px;margin:0;accent-color:var(--p)}.done{text-decoration:line-through;opacity:.5}
+.empty{text-align:center;color:var(--mut);padding:40px 10px}
+</style></head><body>
+<header><h1 id="ttl"></h1></header><div class="wrap" id="app"></div><div id="fabw"></div>
+<nav id="nav"></nav><div id="modal"></div>
+<script>
+const KR='caderno_rec',KL='caderno_lista';
+const ld=k=>{try{return JSON.parse(localStorage.getItem(k)||'[]')}catch(e){return[]}};
+let R=ld(KR),L=ld(KL),view='rec',q='',cat='Todas',dif='Todos';
+const sv=()=>{try{localStorage.setItem(KR,JSON.stringify(R));localStorage.setItem(KL,JSON.stringify(L))}catch(e){}};
+const E=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const CATS=['Doces','Salgados','Bebidas','Outros'],DIFS=['Fácil','Médio','Difícil'];
+const DI={'Fácil':'⭐','Médio':'⭐⭐','Difícil':'⭐⭐⭐'},CI={Doces:'🍰',Salgados:'🥐',Bebidas:'🥤',Outros:'🍽️'};
+const $=s=>document.querySelector(s);
+
+function render(){
+ $('#ttl').textContent={rec:'Caderno de Receitas 💖',lista:'Lista de Compras 🛒',nuvem:'Backup 📦'}[view];
+ $('#nav').innerHTML=[['rec','📖','Receitas 💖'],['lista','🛒','Lista 🛒'],['nuvem','☁️','Backup 📦']].map(([k,i,t])=>`<button class="${view==k?'on':''}" onclick="view='${k}';render()"><span>${i}</span>${t}</button>`).join('');
+ $('#fabw').innerHTML=view=='rec'?'<button class="fab" onclick="form()">＋ Nova Receita 💖</button>':'';
+ $('#app').innerHTML={rec:vRec,lista:vLista,nuvem:vBackup}[view]();
+}
+function vRec(){
+ const f=R.filter(r=>(cat=='Todas'||r.cat==cat)&&(dif=='Todos'||r.dif==dif)&&(r.title+' '+r.ing.join(' ')).toLowerCase().includes(q.toLowerCase()));
+ const ch=(a,cur,set)=>`<div class="chips">${a.map(x=>`<button class="chip ${cur==x?'on':''}" onclick="${set}='${x}';render()">${CI[x]||DI[x]||'✓'} ${x}</button>`).join('')}</div>`;
+ return `<div class="search">🔍<input id="q" placeholder="Buscar receitas ou ingredientes..." value="${E(q)}" oninput="q=this.value;lst()"></div>
+ ${ch(['Todas',...CATS],cat,'cat')}${ch(['Todos',...DIFS],dif,'dif')}<div id="cards">${cards(f)}</div>`;
+}
+const lst=()=>{const f=R.filter(r=>(cat=='Todas'||r.cat==cat)&&(dif=='Todos'||r.dif==dif)&&(r.title+' '+r.ing.join(' ')).toLowerCase().includes(q.toLowerCase()));$('#cards').innerHTML=cards(f)};
+function cards(f){return f.length?f.map(r=>`<div class="card" onclick="det('${r.id}')">${r.img?`<img src="${E(r.img)}" loading="lazy" onerror="this.remove()">`:''}<span class="badge">${CI[r.cat]} ${r.cat}</span><div class="b"><h3>${E(r.title)}</h3><div class="row"><span class="tag">${DI[r.dif]} ${r.dif}</span><button class="ib" onclick="event.stopPropagation();pr('${r.id}')">🖨️</button></div></div></div>`).join(''):'<div class="empty">Nenhuma receita ainda.<br>Toque em “Nova Receita” 💖</div>'}
+
+function det(id){const r=R.find(x=>x.id==id);if(!r)return;
+ modal(`<div class="det"><h2>${E(r.title)}</h2>${r.img?`<img src="${E(r.img)}" onerror="this.remove()">`:''}
+ <p><span class="tag">${DI[r.dif]} ${r.dif}</span> <span class="tag" style="background:#ffe0a8;color:#a86400">${CI[r.cat]} ${r.cat}</span>${r.time?` <span class="tag" style="background:#e6e6f7;color:#555">⏱ ${E(r.time)}</span>`:''}${r.yield?` <span class="tag" style="background:#e6e6f7;color:#555">🍽 ${E(r.yield)}</span>`:''}</p>
+ <h3>Ingredientes</h3><ul>${r.ing.map(i=>`<li>${E(i)}</li>`).join('')}</ul><h3>Modo de preparo</h3><ol>${r.steps.map(i=>`<li>${E(i)}</li>`).join('')}</ol>
+ ${r.src?`<p><a href="${E(r.src)}" target="_blank" rel="noopener" style="color:var(--blue)">🔗 Ver receita original</a></p>`:''}
+ <button class="btn" onclick="toList('${r.id}')">🛒 Adicionar à lista de compras</button>
+ <button class="btn o" onclick="pr('${r.id}')">🖨️ Imprimir</button><button class="btn o" onclick="form('${r.id}')">✏️ Editar</button>
+ <button class="btn o" style="color:#c0392b" onclick="del('${r.id}')">🗑️ Excluir</button><button class="btn o" onclick="closeM()">Fechar</button></div>`)}
+const modal=h=>{$('#modal').innerHTML=`<div class="ov" onclick="if(event.target==this)closeM()"><div class="sheet">${h}</div></div>`};
+const closeM=()=>$('#modal').innerHTML='';
+function del(id){if(confirm('Excluir esta receita?')){R=R.filter(r=>r.id!=id);sv();closeM();render()}}
+function toList(id){const r=R.find(x=>x.id==id);r.ing.forEach(i=>L.push({t:i,d:0,from:r.title}));sv();closeM();view='lista';render()}
+function pr(id){const r=R.find(x=>x.id==id),w=window.open('','_blank');if(!w)return alert('Permita pop-ups para imprimir.');
+ w.document.write(`<title>${E(r.title)}</title><body style="font-family:sans-serif;max-width:700px;margin:auto;padding:20px"><h1>${E(r.title)}</h1><p>${r.cat} · ${r.dif} ${r.time?'· '+E(r.time):''}</p><h3>Ingredientes</h3><ul>${r.ing.map(i=>`<li>${E(i)}</li>`).join('')}</ul><h3>Modo de preparo</h3><ol>${r.steps.map(i=>`<li>${E(i)}</li>`).join('')}</ol>${r.src?`<p><small>${E(r.src)}</small></p>`:''}`);w.document.close();w.print()}
+
+let draft={};
+function form(id){draft=id?{...R.find(x=>x.id==id)}:{id:'',title:'',cat:'Salgados',dif:'Fácil',img:'',ing:[],steps:[],src:'',time:'',yield:''};
+ modal(`<h2>${id?'Editar':'Nova'} receita 💖</h2>
+ ${id?'':`<div class="panel" style="margin-top:0"><label>🔗 Colar link da receita (importa tudo sozinho)</label><input id="f_url" type="url" placeholder="https://..." inputmode="url"><button class="btn b" id="imp" onclick="imp()">✨ Importar do link</button><small id="msg" style="color:var(--mut)"></small></div><p style="text-align:center;color:var(--mut)">— ou escreva manualmente —</p>`}
+ <div id="fields">${fields()}</div><button class="btn" onclick="saveR()">💾 Salvar receita</button><button class="btn o" onclick="closeM()">Cancelar</button>`)}
+const opt=(a,v)=>a.map(x=>`<option ${x==v?'selected':''}>${x}</option>`).join('');
+function fields(){const d=draft;return `<label>Nome</label><input id="f_t" value="${E(d.title)}">
+ <label>Categoria</label><select id="f_c">${opt(CATS,d.cat)}</select><label>Dificuldade</label><select id="f_d">${opt(DIFS,d.dif)}</select>
+ <label>Link da foto (opcional)</label><input id="f_i" value="${E(d.img)}"><label>Tempo (ex: 45 min)</label><input id="f_tm" value="${E(d.time)}">
+ <label>Rendimento (ex: 8 porções)</label><input id="f_y" value="${E(d.yield)}">
+ <label>Ingredientes (um por linha)</label><textarea id="f_ing" rows="6">${E(d.ing.join('\n'))}</textarea>
+ <label>Modo de preparo (um passo por linha)</label><textarea id="f_s" rows="6">${E(d.steps.join('\n'))}</textarea>`}
+function saveR(){const g=i=>$('#'+i).value.trim(),sp=s=>s.split('\n').map(x=>x.trim()).filter(Boolean);
+ if(!g('f_t'))return alert('Dê um nome para a receita.');
+ const r={...draft,title:g('f_t'),cat:g('f_c'),dif:g('f_d'),img:g('f_i'),time:g('f_tm'),yield:g('f_y'),ing:sp($('#f_ing').value),steps:sp($('#f_s').value)};
+ if(r.id)R=R.map(x=>x.id==r.id?r:x);else{r.id=Date.now().toString(36);R.unshift(r)}sv();closeM();view='rec';render()}
+
+const PX=[u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),u=>'https://corsproxy.io/?url='+encodeURIComponent(u)];
+async function getHTML(u){for(const p of PX){try{const c=new AbortController();setTimeout(()=>c.abort(),12000);const r=await fetch(p(u),{signal:c.signal});if(r.ok){const t=await r.text();if(t.length>500)return t}}catch(e){}}throw 0}
+const txt=h=>{const d=document.createElement('div');d.innerHTML=h;return d.textContent.replace(/\s+/g,' ').trim()};
+function findRecipe(doc){for(const s of doc.querySelectorAll('script[type="application/ld+json"]')){try{const stack=[JSON.parse(s.textContent)];while(stack.length){const n=stack.pop();if(!n||typeof n!='object')continue;if(Array.isArray(n)){stack.push(...n);continue}const t=[].concat(n['@type']||[]);if(t.includes('Recipe'))return n;if(n['@graph'])stack.push(...n['@graph'])}}catch(e){}}}
+function steps(x){if(!x)return[];if(typeof x=='string')return x.split(/\n+/).map(txt).filter(Boolean);return[].concat(x).flatMap(s=>typeof s=='string'?[txt(s)]:s.itemListElement?steps(s.itemListElement):s.text?[txt(s.text)]:[])}
+function dur(s){const m=/PT(?:(\d+)H)?(?:(\d+)M)?/.exec(s||'');if(!m)return'';const h=+m[1]||0,mi=+m[2]||0;return(h?h+' h ':'')+(mi?mi+' min':'')}
+async function imp(){const u=$('#f_url').value.trim(),m=$('#msg'),b=$('#imp');if(!/^https?:\/\//.test(u))return m.textContent='Cole um link válido começando com http.';
+ b.disabled=true;m.textContent='Buscando receita… ⏳';
+ try{const doc=new DOMParser().parseFromString(await getHTML(u),'text/html'),r=findRecipe(doc);if(!r)throw 1;
+  let im=r.image;im=Array.isArray(im)?im[0]:im;im=typeof im=='object'?im?.url:im;
+  const st=steps(r.recipeInstructions),ing=[].concat(r.recipeIngredient||[]).map(txt),all=(r.name+' '+(r.recipeCategory||'')+' '+(r.keywords||'')).toLowerCase();
+  const n=st.length,dif=n<=5?'Fácil':n<=9?'Médio':'Difícil';
+  const cat=/doce|sobremesa|bolo|torta doce|brigadeiro|pudim|biscoito|cookie|chocolate|dessert|cake/.test(all)?'Doces':/suco|bebida|drink|vitamina|smoothie|caipirinha/.test(all)?'Bebidas':'Salgados';
+  draft={...draft,title:txt(r.name||''),img:im||'',ing,steps:st,src:u,time:dur(r.totalTime||r.cookTime),yield:[].concat(r.recipeYield||[])[0]+''||'',dif,cat};
+  if(draft.yield=='undefined')draft.yield='';
+  $('#fields').innerHTML=fields();m.textContent='✅ Pronto! Confira os dados e toque em Salvar.'}
+ catch(e){m.textContent='😕 Não consegui ler esse site automaticamente. Preencha manualmente abaixo (o link fica salvo).';draft.src=u}
+ b.disabled=false}
+
+function vLista(){return `<div class="lst">${L.length?L.map((x,i)=>`<label><input type="checkbox" ${x.d?'checked':''} onchange="L[${i}].d=this.checked;sv();render()"><span class="${x.d?'done':''}" style="flex:1">${E(x.t)}<br><small style="color:var(--mut)">${E(x.from||'')}</small></span><button class="ib" onclick="event.preventDefault();L.splice(${i},1);sv();render()">✕</button></label>`).join(''):'<div class="empty">Sua lista está vazia.<br>Abra uma receita e toque em “Adicionar à lista” 🛒</div>'}</div>
+ <input id="nl" placeholder="Adicionar item…" onkeydown="if(event.key=='Enter'&&this.value.trim()){L.push({t:this.value.trim(),d:0});sv();render()}">
+ ${L.some(x=>x.d)?'<button class="btn o" onclick="L=L.filter(x=>!x.d);sv();render()">Limpar itens marcados</button>':''}`}
+function vBackup(){return `<div class="panel"><h2 style="color:var(--ink)">Status de Salvamento</h2><p>${R.length} receitas salvas neste aparelho</p>
+ <div class="stats"><div class="stat" style="background:#ECE6F2;color:var(--blue)">📱 Neste app<b>${R.length}</b></div><div class="stat" style="background:#FFD9E0;color:var(--p)">🛒 Na lista<b>${L.length}</b></div></div></div>
+ <div class="panel"><h2>📦 Exportar / Importar Backup</h2><p>Guarde uma cópia das suas receitas ou transfira para outro celular.</p>
+ <button class="btn" onclick="bk('copy')">📋 Copiar backup (JSON)</button><button class="btn" style="background:var(--blue)" onclick="bk('file')">⬇️ Baixar arquivo de backup</button>
+ <button class="btn o" onclick="rs()">📥 Restaurar backup do texto</button></div>`}
+async function bk(m){const j=JSON.stringify({receitas:R,lista:L});
+ if(m=='copy'){try{await navigator.clipboard.writeText(j);alert('Backup copiado! Cole em um bloco de notas ou mensagem.')}catch(e){prompt('Copie o texto:',j)}}
+ else{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([j],{type:'application/json'}));a.download='caderno-backup.json';a.click()}}
+function rs(){modal(`<h2>Restaurar backup 📥</h2><textarea id="rt" rows="8" placeholder="Cole aqui o texto do backup"></textarea><input type="file" id="rf" accept=".json" onchange="this.files[0].text().then(t=>$('#rt').value=t)">
+ <button class="btn" onclick="doRs()">Restaurar</button><button class="btn o" onclick="closeM()">Cancelar</button>`)}
+function doRs(){try{const d=JSON.parse($('#rt').value);if(!Array.isArray(d.receitas))throw 0;const ids=new Set(R.map(r=>r.id));R=[...d.receitas.filter(r=>!ids.has(r.id)),...R];L=[...L,...(d.lista||[])];sv();closeM();view='rec';render();alert('Backup restaurado! 💖')}catch(e){alert('Texto de backup inválido.')}}
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+render();
+</script></body></html>
