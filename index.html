@@ -60,7 +60,7 @@ const $=s=>document.querySelector(s);
 function render(){
  $('#ttl').textContent={rec:'Caderno de Receitas 💖',lista:'Lista de Compras 🛒',nuvem:'Backup 📦'}[view];
  $('#nav').innerHTML=[['rec','📖','Receitas 💖'],['lista','🛒','Lista 🛒'],['nuvem','☁️','Backup 📦']].map(([k,i,t])=>`<button class="${view==k?'on':''}" onclick="view='${k}';render()"><span>${i}</span>${t}</button>`).join('');
- $('#fabw').innerHTML=view=='rec'?'<button class="fab" onclick="form()">＋ Nova Receita 💖</button>':'';
+ $('#fabw').innerHTML=view=='rec'?'<button class="fab" onclick="openForm()">＋ Nova Receita 💖</button>':'';
  $('#app').innerHTML={rec:vRec,lista:vLista,nuvem:vBackup}[view]();
 }
 function vRec(){
@@ -78,7 +78,7 @@ function det(id){const r=R.find(x=>x.id==id);if(!r)return;
  <h3>Ingredientes</h3><ul>${r.ing.map(i=>`<li>${E(i)}</li>`).join('')}</ul><h3>Modo de preparo</h3><ol>${r.steps.map(i=>`<li>${E(i)}</li>`).join('')}</ol>
  ${r.src?`<p><a href="${E(r.src)}" target="_blank" rel="noopener" style="color:var(--blue)">🔗 Ver receita original</a></p>`:''}
  <button class="btn" onclick="toList('${r.id}')">🛒 Adicionar à lista de compras</button>
- <button class="btn o" onclick="pr('${r.id}')">🖨️ Imprimir</button><button class="btn o" onclick="form('${r.id}')">✏️ Editar</button>
+ <button class="btn o" onclick="pr('${r.id}')">🖨️ Imprimir</button><button class="btn o" onclick="openForm('${r.id}')">✏️ Editar</button>
  <button class="btn o" style="color:#c0392b" onclick="del('${r.id}')">🗑️ Excluir</button><button class="btn o" onclick="closeM()">Fechar</button></div>`)}
 const modal=h=>{$('#modal').innerHTML=`<div class="ov" onclick="if(event.target==this)closeM()"><div class="sheet">${h}</div></div>`};
 const closeM=()=>$('#modal').innerHTML='';
@@ -88,7 +88,7 @@ function pr(id){const r=R.find(x=>x.id==id),w=window.open('','_blank');if(!w)ret
  w.document.write(`<title>${E(r.title)}</title><body style="font-family:sans-serif;max-width:700px;margin:auto;padding:20px"><h1>${E(r.title)}</h1><p>${r.cat} · ${r.dif} ${r.time?'· '+E(r.time):''}</p><h3>Ingredientes</h3><ul>${r.ing.map(i=>`<li>${E(i)}</li>`).join('')}</ul><h3>Modo de preparo</h3><ol>${r.steps.map(i=>`<li>${E(i)}</li>`).join('')}</ol>${r.src?`<p><small>${E(r.src)}</small></p>`:''}`);w.document.close();w.print()}
 
 let draft={};
-function form(id){draft=id?{...R.find(x=>x.id==id)}:{id:'',title:'',cat:'Salgados',dif:'Fácil',img:'',ing:[],steps:[],src:'',time:'',yield:''};
+function openForm(id){draft=id?{...R.find(x=>x.id==id)}:{id:'',title:'',cat:'Salgados',dif:'Fácil',img:'',ing:[],steps:[],src:'',time:'',yield:''};
  modal(`<h2>${id?'Editar':'Nova'} receita 💖</h2>
  ${id?'':`<div class="panel" style="margin-top:0"><label>🔗 Colar link da receita (importa tudo sozinho)</label><input id="f_url" type="url" placeholder="https://..." inputmode="url"><button class="btn b" id="imp" onclick="imp()">✨ Importar do link</button><small id="msg" style="color:var(--mut)"></small></div><p style="text-align:center;color:var(--mut)">— ou escreva manualmente —</p>`}
  <div id="fields">${fields()}</div><button class="btn" onclick="saveR()">💾 Salvar receita</button><button class="btn o" onclick="closeM()">Cancelar</button>`)}
