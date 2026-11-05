@@ -153,8 +153,15 @@ function impTxt(){const m=$('#msg'),t=$('#f_txt').value;if(t.trim().length<20)re
  else{o.title=L[0];o.steps=L.slice(1)}
  apply(o,'',m)}
 
+function addMan(){const i=$('#nl'),v=i.value.trim();if(!v)return;L.push({t:v,d:0});sv();render()}
+function pickRec(){if(!R.length)return alert('Você ainda não tem receitas salvas.');
+ modal(`<h2>Escolher receitas 📖</h2><p style="color:var(--mut);margin-top:0">Marque uma ou mais receitas para adicionar os ingredientes à lista.</p><div class="lst">${R.map(r=>`<label><input type="checkbox" class="pk" value="${E(r.id)}"><span style="flex:1">${E(r.title)}<br><small style="color:var(--mut)">${r.ing.length} ingredientes</small></span></label>`).join('')}</div>
+ <button class="btn" onclick="addPicked()">Adicionar à lista 🛒</button><button class="btn o" onclick="closeM()">Cancelar</button>`)}
+function addPicked(){const ids=[...document.querySelectorAll('.pk:checked')].map(x=>x.value);if(!ids.length)return alert('Marque pelo menos uma receita.');
+ ids.forEach(id=>{const r=R.find(x=>x.id==id);if(r)r.ing.forEach(i=>L.push({t:i,d:0,from:r.title}))});sv();closeM();view='lista';render()}
 function vLista(){return `<div class="lst">${L.length?L.map((x,i)=>`<label><input type="checkbox" ${x.d?'checked':''} onchange="L[${i}].d=this.checked;sv();render()"><span class="${x.d?'done':''}" style="flex:1">${E(x.t)}<br><small style="color:var(--mut)">${E(x.from||'')}</small></span><button class="ib" onclick="event.preventDefault();L.splice(${i},1);sv();render()">✕</button></label>`).join(''):'<div class="empty">Sua lista está vazia.<br>Abra uma receita e toque em “Adicionar à lista” 🛒</div>'}</div>
- <input id="nl" placeholder="Adicionar item…" onkeydown="if(event.key=='Enter'&&this.value.trim()){L.push({t:this.value.trim(),d:0});sv();render()}">
+ <div style="display:flex;gap:8px;margin-top:10px"><input id="nl" style="flex:1;margin:0" placeholder="Adicionar item manualmente…" onkeydown="if(event.key=='Enter')addMan()"><button class="btn" style="width:auto;margin:0;padding:0 20px" onclick="addMan()">＋</button></div>
+ <button class="btn b" onclick="pickRec()">📖 Adicionar ingredientes de uma receita</button>
  ${L.some(x=>x.d)?'<button class="btn o" onclick="L=L.filter(x=>!x.d);sv();render()">Limpar itens marcados</button>':''}`}
 function vBackup(){return `<div class="panel"><h2 style="color:var(--ink)">Status de Salvamento</h2><p>${R.length} receitas salvas neste aparelho</p>
  <div class="stats"><div class="stat" style="background:#ECE6F2;color:var(--blue)">📱 Neste app<b>${R.length}</b></div><div class="stat" style="background:#FFD9E0;color:var(--p)">🛒 Na lista<b>${L.length}</b></div></div></div>
