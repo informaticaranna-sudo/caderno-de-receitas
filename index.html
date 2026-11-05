@@ -91,7 +91,7 @@ function pr(id){const r=R.find(x=>x.id==id),w=window.open('','_blank');if(!w)ret
 let draft={};
 function openForm(id){draft=id?{...R.find(x=>x.id==id)}:{id:'',title:'',cat:'Salgados',dif:'Fácil',img:'',ing:[],steps:[],src:'',time:'',yield:''};
  modal(`<h2>${id?'Editar':'Nova'} receita 💖</h2>
- ${id?'':`<div class="panel" style="margin-top:0"><label>🔗 Colar link da receita (importa tudo sozinho)</label><input id="f_url" type="url" placeholder="https://..." inputmode="url"><button class="btn b" id="imp" onclick="imp()">✨ Importar do link</button><small id="msg" style="color:var(--mut)"></small></div><p style="text-align:center;color:var(--mut)">— ou escreva manualmente —</p>`}
+ ${id?'':`<div class="panel" style="margin-top:0"><label>🔗 Colar link da receita (importa tudo sozinho)</label><input id="f_url" type="url" placeholder="https://..." inputmode="url"><button class="btn b" id="imp" onclick="imp()">✨ Importar do link</button><small id="msg" style="color:var(--mut)"></small><details style="margin-top:10px"><summary style="cursor:pointer;font-size:14px;color:var(--p)">📝 Ou cole o texto da receita</summary><textarea id="f_txt" rows="5" placeholder="Copie a receita do site e cole aqui (com os títulos Ingredientes e Modo de preparo)"></textarea><button class="btn o" onclick="impTxt()">Organizar texto</button></details></div><p style="text-align:center;color:var(--mut)">— ou escreva manualmente —</p>`}
  <div id="fields">${fields()}</div><button class="btn" onclick="saveR()">💾 Salvar receita</button><button class="btn o" onclick="closeM()">Cancelar</button>`)}
 const opt=(a,v)=>a.map(x=>`<option ${x==v?'selected':''}>${x}</option>`).join('');
 function fields(){const d=draft;return `<label>Nome</label><input id="f_t" value="${E(d.title)}">
@@ -105,24 +105,52 @@ function saveR(){const g=i=>$('#'+i).value.trim(),sp=s=>s.split('\n').map(x=>x.t
  const r={...draft,title:g('f_t'),cat:g('f_c'),dif:g('f_d'),img:g('f_i'),time:g('f_tm'),yield:g('f_y'),ing:sp($('#f_ing').value),steps:sp($('#f_s').value)};
  if(r.id)R=R.map(x=>x.id==r.id?r:x);else{r.id=Date.now().toString(36);R.unshift(r)}sv();closeM();view='rec';render()}
 
-const PX=[u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),u=>'https://corsproxy.io/?url='+encodeURIComponent(u)];
-async function getHTML(u){for(const p of PX){try{const c=new AbortController();setTimeout(()=>c.abort(),12000);const r=await fetch(p(u),{signal:c.signal});if(r.ok){const t=await r.text();if(t.length>500)return t}}catch(e){}}throw 0}
-const txt=h=>{const d=document.createElement('div');d.innerHTML=h;return d.textContent.replace(/\s+/g,' ').trim()};
+const PX=[
+ u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),
+ u=>'https://api.codetabs.com/v1/proxy/?quest='+encodeURIComponent(u),
+ u=>'https://corsproxy.io/?url='+encodeURIComponent(u),
+ u=>'https://thingproxy.freeboard.io/fetch/'+u,
+ u=>'https://r.jina.ai/'+u];
+const tryP=(i,u)=>new Promise(async(ok,no)=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),15000);
+ try{const r=await fetch(PX[i](u),{signal:c.signal,headers:i==4?{'X-Return-Format':'html'}:{}});const x=await r.text();clearTimeout(t);/<html|<body|<script/i.test(x)&&x.length>800?ok(x):no(0)}catch(e){no(e)}});
+const getHTML=u=>Promise.any(PX.map((_,i)=>tryP(i,u)));
+const txt=h=>new DOMParser().parseFromString(String(h??''),'text/html').body.textContent.replace(/\s+/g,' ').trim();
+const cl=s=>s.replace(/^[-•*·]+\s*/,'').replace(/^\d+[.)]\s+/,'').trim();
+const t2=e=>cl(e.textContent.replace(/\s+/g,' ').trim());
 function findRecipe(doc){for(const s of doc.querySelectorAll('script[type="application/ld+json"]')){try{const stack=[JSON.parse(s.textContent)];while(stack.length){const n=stack.pop();if(!n||typeof n!='object')continue;if(Array.isArray(n)){stack.push(...n);continue}const t=[].concat(n['@type']||[]);if(t.includes('Recipe'))return n;if(n['@graph'])stack.push(...n['@graph'])}}catch(e){}}}
 function steps(x){if(!x)return[];if(typeof x=='string')return x.split(/\n+/).map(txt).filter(Boolean);return[].concat(x).flatMap(s=>typeof s=='string'?[txt(s)]:s.itemListElement?steps(s.itemListElement):s.text?[txt(s.text)]:[])}
 function dur(s){const m=/PT(?:(\d+)H)?(?:(\d+)M)?/.exec(s||'');if(!m)return'';const h=+m[1]||0,mi=+m[2]||0;return(h?h+' h ':'')+(mi?mi+' min':'')}
+function fromDoc(doc){
+ const o={title:'',img:'',time:'',yield:'',ing:[],steps:[],kw:''},r=findRecipe(doc),mt=n=>doc.querySelector(`meta[property="${n}"],meta[name="${n}"]`)?.content||'';
+ if(r){let im=r.image;im=Array.isArray(im)?im[0]:im;im=typeof im=='object'?im?.url:im;
+  Object.assign(o,{title:txt(r.name||''),img:im||'',ing:[].concat(r.recipeIngredient||r.ingredients||[]).map(txt).filter(Boolean),steps:steps(r.recipeInstructions),time:dur(r.totalTime||r.cookTime),yield:String([].concat(r.recipeYield||[])[0]||''),kw:String(r.recipeCategory||'')+' '+String(r.keywords||'')})}
+ if(!o.title)o.title=txt(mt('og:title')||doc.title).split(/\s[|–—-]\s/)[0];
+ if(!o.img)o.img=mt('og:image');
+ if(!o.ing.length)o.ing=[...doc.querySelectorAll('[itemprop=recipeIngredient],[itemprop=ingredients]')].map(t2).filter(Boolean);
+ if(!o.steps.length){const e=doc.querySelector('[itemprop=recipeInstructions]');if(e){const li=[...e.querySelectorAll('li,p')];o.steps=li.length?li.map(t2).filter(Boolean):e.textContent.split('\n').map(x=>cl(x.trim())).filter(Boolean)}}
+ if(!o.ing.length||!o.steps.length){const hs=[...doc.querySelectorAll('h1,h2,h3,h4,h5,strong,b')];
+  const after=re=>{const h=hs.find(x=>x.textContent.trim().length<40&&re.test(x.textContent.trim()));if(!h)return[];let n=(h.closest('h1,h2,h3,h4,h5,p,div')||h).nextElementSibling,out=[];
+   for(let i=0;n&&i<6;i++,n=n.nextElementSibling){if(/^H[1-5]$/.test(n.tagName)&&out.length)break;const li=[...n.querySelectorAll('li')];if(li.length)out.push(...li.map(t2));else if(n.tagName=='P'||n.tagName=='LI')out.push(t2(n))}return out.filter(Boolean)};
+  if(!o.ing.length)o.ing=after(/^ingredientes?/i);if(!o.steps.length)o.steps=after(/^(modo de preparo|preparo|modo de fazer|instru)/i)}
+ return o}
+function apply(o,u,m){const n=o.steps.length,t=(o.title+' '+o.kw).toLowerCase();
+ o.dif=n<=5?'Fácil':n<=9?'Médio':'Difícil';
+ o.cat=/doce|sobremesa|bolo|brigadeiro|pudim|biscoito|cookie|chocolate|mousse|dessert|cake|sorvete|pave|pavê/.test(t)?'Doces':/suco|bebida|drink|vitamina|smoothie|caipirinha/.test(t)?'Bebidas':'Salgados';delete o.kw;
+ for(const k in o)if(o[k]&&(!Array.isArray(o[k])||o[k].length))draft[k]=o[k];if(u)draft.src=u;
+ $('#fields').innerHTML=fields();
+ m.textContent=draft.ing.length&&draft.steps.length?'✅ Pronto! Confira os dados e toque em Salvar.':'⚠️ Consegui só parte dos dados. Complete o que faltar abaixo e salve.'}
 async function imp(){const u=$('#f_url').value.trim(),m=$('#msg'),b=$('#imp');if(!/^https?:\/\//.test(u))return m.textContent='Cole um link válido começando com http.';
- b.disabled=true;m.textContent='Buscando receita… ⏳';
- try{const doc=new DOMParser().parseFromString(await getHTML(u),'text/html'),r=findRecipe(doc);if(!r)throw 1;
-  let im=r.image;im=Array.isArray(im)?im[0]:im;im=typeof im=='object'?im?.url:im;
-  const st=steps(r.recipeInstructions),ing=[].concat(r.recipeIngredient||[]).map(txt),all=(r.name+' '+(r.recipeCategory||'')+' '+(r.keywords||'')).toLowerCase();
-  const n=st.length,dif=n<=5?'Fácil':n<=9?'Médio':'Difícil';
-  const cat=/doce|sobremesa|bolo|torta doce|brigadeiro|pudim|biscoito|cookie|chocolate|dessert|cake/.test(all)?'Doces':/suco|bebida|drink|vitamina|smoothie|caipirinha/.test(all)?'Bebidas':'Salgados';
-  draft={...draft,title:txt(r.name||''),img:im||'',ing,steps:st,src:u,time:dur(r.totalTime||r.cookTime),yield:[].concat(r.recipeYield||[])[0]+''||'',dif,cat};
-  if(draft.yield=='undefined')draft.yield='';
-  $('#fields').innerHTML=fields();m.textContent='✅ Pronto! Confira os dados e toque em Salvar.'}
- catch(e){m.textContent='😕 Não consegui ler esse site automaticamente. Preencha manualmente abaixo (o link fica salvo).';draft.src=u}
+ b.disabled=true;m.textContent='Buscando receita… ⏳ (pode levar até 15 s)';let h;
+ try{h=await getHTML(u)}catch(e){draft.src=u;m.textContent='😕 Não consegui abrir esse site pelos serviços gratuitos de leitura (podem estar fora do ar ou bloqueando o site). Tente de novo daqui a pouco ou cole o texto da receita na caixa abaixo. O link fica salvo.';b.disabled=false;return}
+ try{apply(fromDoc(new DOMParser().parseFromString(h,'text/html')),u,m)}catch(e){draft.src=u;m.textContent='😕 Abri o site, mas não entendi a página. Cole o texto da receita abaixo ou preencha manualmente.'}
  b.disabled=false}
+function impTxt(){const m=$('#msg'),t=$('#f_txt').value;if(t.trim().length<20)return m.textContent='Cole o texto da receita na caixa.';
+ const L=t.split('\n').map(cl).filter(Boolean),ix=L.findIndex(x=>/^ingredientes?\s*:?$/i.test(x)),px=L.findIndex(x=>/^(modo de (preparo|fazer)|preparo|instru[çc][õo]es)\s*:?$/i.test(x)),o={title:'',ing:[],steps:[],kw:''};
+ if(ix>=0&&px>ix){o.ing=L.slice(ix+1,px);o.steps=L.slice(px+1);if(ix>0)o.title=L[0]}
+ else if(ix>=0&&px>=0){o.steps=L.slice(px+1,ix);o.ing=L.slice(ix+1);if(px>0)o.title=L[0]}
+ else if(ix>=0){o.ing=L.slice(ix+1);if(ix>0)o.title=L[0]}
+ else{o.title=L[0];o.steps=L.slice(1)}
+ apply(o,'',m)}
 
 function vLista(){return `<div class="lst">${L.length?L.map((x,i)=>`<label><input type="checkbox" ${x.d?'checked':''} onchange="L[${i}].d=this.checked;sv();render()"><span class="${x.d?'done':''}" style="flex:1">${E(x.t)}<br><small style="color:var(--mut)">${E(x.from||'')}</small></span><button class="ib" onclick="event.preventDefault();L.splice(${i},1);sv();render()">✕</button></label>`).join(''):'<div class="empty">Sua lista está vazia.<br>Abra uma receita e toque em “Adicionar à lista” 🛒</div>'}</div>
  <input id="nl" placeholder="Adicionar item…" onkeydown="if(event.key=='Enter'&&this.value.trim()){L.push({t:this.value.trim(),d:0});sv();render()}">
