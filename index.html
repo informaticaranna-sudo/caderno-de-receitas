@@ -53,11 +53,12 @@ label{font-size:13px;font-weight:500;color:var(--mut)}
 const KR='caderno_rec',KL='caderno_lista';
 const ld=k=>{try{return JSON.parse(localStorage.getItem(k)||'[]')}catch(e){return[]}};
 let R=ld(KR),L=ld(KL),view='rec',q='',cat='Todas',dif='Todos';
-const sv=()=>{try{localStorage.setItem(KR,JSON.stringify(R));localStorage.setItem(KL,JSON.stringify(L))}catch(e){}};
+const sv=()=>{try{localStorage.setItem(KR,JSON.stringify(R));localStorage.setItem(KL,JSON.stringify(L))}catch(e){alert('⚠️ Não consegui salvar: o armazenamento do aparelho está cheio. Faça um backup e remova fotos grandes.')}};
 const E=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const CATS=['Doces','Salgados','Bebidas','Outros'],DIFS=['Fácil','Médio','Difícil'];
 const DI={'Fácil':'⭐','Médio':'⭐⭐','Difícil':'⭐⭐⭐'},CI={Doces:'🍰',Salgados:'🥐',Bebidas:'🥤',Outros:'🍽️'};
 const $=s=>document.querySelector(s);
+const allCats=()=>{const o=[...CATS];R.forEach(r=>{if(r.cat&&!o.includes(r.cat))o.push(r.cat)});return o};
 
 function render(){
  $('#ttl').innerHTML={rec:'Caderno de Receitas <img class="lg" src="icon-192.png" alt="">',lista:'Lista de Compras 🛒',nuvem:'Backup 📦'}[view];
@@ -66,17 +67,18 @@ function render(){
  $('#app').innerHTML={rec:vRec,lista:vLista,nuvem:vBackup}[view]();
 }
 function vRec(){
+ if(cat!='Todas'&&!allCats().includes(cat))cat='Todas';
  const f=R.filter(r=>(cat=='Todas'||r.cat==cat)&&(dif=='Todos'||r.dif==dif)&&(r.title+' '+r.ing.join(' ')).toLowerCase().includes(q.toLowerCase()));
- const ch=(a,cur,set)=>`<div class="chips">${a.map(x=>`<button class="chip ${cur==x?'on':''}" onclick="${set}='${x}';render()">${CI[x]||DI[x]||'✓'} ${x}</button>`).join('')}</div>`;
+ const ch=(a,cur,set)=>`<div class="chips">${a.map(x=>`<button class="chip ${cur==x?'on':''}" onclick="${set}='${x}';render()">${CI[x]||DI[x]||(x=='Todas'||x=='Todos'?'✓':'🏷️')} ${x}</button>`).join('')}</div>`;
  return `<div class="search">🔍<input id="q" placeholder="Buscar receitas ou ingredientes..." value="${E(q)}" oninput="q=this.value;lst()"></div>
- ${ch(['Todas',...CATS],cat,'cat')}${ch(['Todos',...DIFS],dif,'dif')}<div id="cards">${cards(f)}</div>`;
+ ${ch(['Todas',...allCats()],cat,'cat')}${ch(['Todos',...DIFS],dif,'dif')}<div id="cards">${cards(f)}</div>`;
 }
 const lst=()=>{const f=R.filter(r=>(cat=='Todas'||r.cat==cat)&&(dif=='Todos'||r.dif==dif)&&(r.title+' '+r.ing.join(' ')).toLowerCase().includes(q.toLowerCase()));$('#cards').innerHTML=cards(f)};
-function cards(f){return f.length?f.map(r=>`<div class="card${r.img?'':' noimg'}" onclick="det('${r.id}')">${r.img?`<img src="${E(r.img)}" loading="lazy" onerror="this.remove()">`:''}<span class="badge">${CI[r.cat]} ${r.cat}</span><div class="b"><h3>${E(r.title)}</h3><div class="row"><span class="tag">${DI[r.dif]} ${r.dif}</span><button class="ib" onclick="event.stopPropagation();pr('${r.id}')">🖨️</button></div></div></div>`).join(''):'<div class="empty">Nenhuma receita ainda.<br>Toque em “Nova Receita” 💖</div>'}
+function cards(f){return f.length?f.map(r=>`<div class="card${r.img?'':' noimg'}" onclick="det('${r.id}')">${r.img?`<img src="${E(r.img)}" loading="lazy" onerror="this.remove()">`:''}<span class="badge">${CI[r.cat]||'🏷️'} ${r.cat}</span><div class="b"><h3>${E(r.title)}</h3><div class="row"><span class="tag">${DI[r.dif]} ${r.dif}</span><button class="ib" onclick="event.stopPropagation();pr('${r.id}')">🖨️</button></div></div></div>`).join(''):'<div class="empty">Nenhuma receita ainda.<br>Toque em “Nova Receita” 💖</div>'}
 
 function det(id){const r=R.find(x=>x.id==id);if(!r)return;
  modal(`<div class="det"><h2>${E(r.title)}</h2>${r.img?`<img src="${E(r.img)}" onerror="this.remove()">`:''}
- <p><span class="tag">${DI[r.dif]} ${r.dif}</span> <span class="tag" style="background:#ffe0a8;color:#a86400">${CI[r.cat]} ${r.cat}</span>${r.time?` <span class="tag" style="background:#e6e6f7;color:#555">⏱ ${E(r.time)}</span>`:''}${r.yield?` <span class="tag" style="background:#e6e6f7;color:#555">🍽 ${E(r.yield)}</span>`:''}</p>
+ <p><span class="tag">${DI[r.dif]} ${r.dif}</span> <span class="tag" style="background:#ffe0a8;color:#a86400">${CI[r.cat]||'🏷️'} ${r.cat}</span>${r.time?` <span class="tag" style="background:#e6e6f7;color:#555">⏱ ${E(r.time)}</span>`:''}${r.yield?` <span class="tag" style="background:#e6e6f7;color:#555">🍽 ${E(r.yield)}</span>`:''}</p>
  <h3>Ingredientes</h3><ul>${r.ing.map(i=>`<li>${E(i)}</li>`).join('')}</ul><h3>Modo de preparo</h3><ol>${r.steps.map(i=>`<li>${E(i)}</li>`).join('')}</ol>
  ${r.src?`<p><a href="${E(r.src)}" target="_blank" rel="noopener" style="color:var(--blue)">🔗 Ver receita original</a></p>`:''}
  <button class="btn" onclick="toList('${r.id}')">🛒 Adicionar à lista de compras</button>
@@ -93,17 +95,27 @@ let draft={};
 function openForm(id){draft=id?{...R.find(x=>x.id==id)}:{id:'',title:'',cat:'Salgados',dif:'Fácil',img:'',ing:[],steps:[],src:'',time:'',yield:''};
  modal(`<h2>${id?'Editar':'Nova'} receita 💖</h2>
  ${id?'':`<div class="panel" style="margin-top:0"><label>🔗 Colar link da receita (importa tudo sozinho)</label><input id="f_url" type="url" placeholder="https://..." inputmode="url"><button class="btn b" id="imp" onclick="imp()">✨ Importar do link</button><small id="msg" style="color:var(--mut)"></small><details style="margin-top:10px"><summary style="cursor:pointer;font-size:14px;color:var(--p)">📝 Ou cole o texto da receita</summary><textarea id="f_txt" rows="5" placeholder="Copie a receita do site e cole aqui (com os títulos Ingredientes e Modo de preparo)"></textarea><button class="btn o" onclick="impTxt()">Organizar texto</button></details></div><p style="text-align:center;color:var(--mut)">— ou escreva manualmente —</p>`}
- <div id="fields">${fields()}</div><button class="btn" onclick="saveR()">💾 Salvar receita</button><button class="btn o" onclick="closeM()">Cancelar</button>`)}
+ <div id="fields">${fields()}</div><button class="btn" onclick="saveR()">💾 Salvar receita</button><button class="btn o" onclick="closeM()">Cancelar</button>`);prev()}
 const opt=(a,v)=>a.map(x=>`<option ${x==v?'selected':''}>${x}</option>`).join('');
 function fields(){const d=draft;return `<label>Nome</label><input id="f_t" value="${E(d.title)}">
- <label>Categoria</label><select id="f_c">${opt(CATS,d.cat)}</select><label>Dificuldade</label><select id="f_d">${opt(DIFS,d.dif)}</select>
- <label>Link da foto (opcional)</label><input id="f_i" value="${E(d.img)}"><label>Tempo (ex: 45 min)</label><input id="f_tm" value="${E(d.time)}">
+ <label>Categoria</label><select id="f_c">${opt(allCats(),d.cat)}</select><input id="f_nc" placeholder="➕ Ou crie uma nova categoria (ex: Massas)" maxlength="25"><label>Dificuldade</label><select id="f_d">${opt(DIFS,d.dif)}</select>
+ <label>Foto (opcional)</label><div id="f_prev"></div>
+ <div style="display:flex;gap:8px"><button type="button" class="btn b" style="margin:5px 0" onclick="$('#f_file').click()">📷 Escolher / tirar foto</button><button type="button" class="btn o" style="margin:5px 0;width:auto;padding:0 16px" onclick="rmImg()">✕</button></div>
+ <input type="file" id="f_file" accept="image/*" style="display:none" onchange="readImg(this)">
+ <input id="f_i" placeholder="…ou cole o link de uma foto" value="${E(String(d.img||'').startsWith('data:')?'':d.img)}" oninput="draft.img=this.value.trim();prev()"><label>Tempo (ex: 45 min)</label><input id="f_tm" value="${E(d.time)}">
  <label>Rendimento (ex: 8 porções)</label><input id="f_y" value="${E(d.yield)}">
  <label>Ingredientes (um por linha)</label><textarea id="f_ing" rows="6">${E(d.ing.join('\n'))}</textarea>
  <label>Modo de preparo (um passo por linha)</label><textarea id="f_s" rows="6">${E(d.steps.join('\n'))}</textarea>`}
+function newCat(){const n=g0('f_nc');if(!n)return g0('f_c');return allCats().find(c=>c.toLowerCase()==n.toLowerCase())||n}
+const g0=i=>$('#'+i).value.trim();
+function prev(){const p=$('#f_prev');if(p)p.innerHTML=draft.img?`<img src="${E(draft.img)}" style="width:100%;max-height:180px;object-fit:cover;border-radius:16px;margin:4px 0" onerror="this.remove()">`:''}
+function rmImg(){draft.img='';$('#f_i').value='';prev()}
+function readImg(inp){const f=inp.files[0];if(!f)return;const im=new Image(),u=URL.createObjectURL(f);
+ im.onload=()=>{const k=Math.min(1,900/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);draft.img=c.toDataURL('image/jpeg',.75);URL.revokeObjectURL(u);$('#f_i').value='';prev()};
+ im.onerror=()=>alert('Não consegui abrir essa imagem. Tente outra foto.');im.src=u;inp.value=''}
 function saveR(){const g=i=>$('#'+i).value.trim(),sp=s=>s.split('\n').map(x=>x.trim()).filter(Boolean);
  if(!g('f_t'))return alert('Dê um nome para a receita.');
- const r={...draft,title:g('f_t'),cat:g('f_c'),dif:g('f_d'),img:g('f_i'),time:g('f_tm'),yield:g('f_y'),ing:sp($('#f_ing').value),steps:sp($('#f_s').value)};
+ const r={...draft,title:g('f_t'),cat:newCat(),dif:g('f_d'),img:g('f_i')||(String(draft.img||'').startsWith('data:')?draft.img:''),time:g('f_tm'),yield:g('f_y'),ing:sp($('#f_ing').value),steps:sp($('#f_s').value)};
  if(r.id)R=R.map(x=>x.id==r.id?r:x);else{r.id=Date.now().toString(36);R.unshift(r)}sv();closeM();view='rec';render()}
 
 const PX=[
@@ -138,7 +150,7 @@ function apply(o,u,m){const n=o.steps.length,t=(o.title+' '+o.kw).toLowerCase();
  o.dif=n<=5?'Fácil':n<=9?'Médio':'Difícil';
  o.cat=/doce|sobremesa|bolo|brigadeiro|pudim|biscoito|cookie|chocolate|mousse|dessert|cake|sorvete|pave|pavê/.test(t)?'Doces':/suco|bebida|drink|vitamina|smoothie|caipirinha/.test(t)?'Bebidas':'Salgados';delete o.kw;
  for(const k in o)if(o[k]&&(!Array.isArray(o[k])||o[k].length))draft[k]=o[k];if(u)draft.src=u;
- $('#fields').innerHTML=fields();
+ $('#fields').innerHTML=fields();prev();
  m.textContent=draft.ing.length&&draft.steps.length?'✅ Pronto! Confira os dados e toque em Salvar.':'⚠️ Consegui só parte dos dados. Complete o que faltar abaixo e salve.'}
 async function imp(){const u=$('#f_url').value.trim(),m=$('#msg'),b=$('#imp');if(!/^https?:\/\//.test(u))return m.textContent='Cole um link válido começando com http.';
  b.disabled=true;m.textContent='Buscando receita… ⏳ (pode levar até 15 s)';let h;
